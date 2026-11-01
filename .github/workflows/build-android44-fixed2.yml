@@ -32,7 +32,12 @@ jobs:
             echo "sdkmanager was not found under $ANDROID_SDK_ROOT"
             exit 1
           fi
+          # sdkmanager may stop reading after accepting all licenses.
+          # Disable pipefail only for this pipeline so `yes` receiving SIGPIPE
+          # does not incorrectly fail the step; sdkmanager's exit code is kept.
+          set +o pipefail
           yes | "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --licenses
+          set -o pipefail
           "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --install "platforms;android-22" "build-tools;22.0.1"
 
       # This legacy Android Gradle Plugin must build with Java 8.
