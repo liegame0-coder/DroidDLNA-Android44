@@ -1,0 +1,62 @@
+name: Build Android 4.4 APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      # Use JDK 17 only for the Android SDK command-line tools.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # Use the SDK tools already installed on the GitHub runner.
+      # Avoid android-actions/setup-android@v3, which replaced the runner's
+      # tools with a newer sdkmanager and caused the JDK detection failure.
+      - name: Install Android 22 SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          export ANDROID_SDK_ROOT="${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}"
+          SDKMANAGER="$(find "$ANDROID_SDK_ROOT/cmdline-tools" -type f -name sdkmanager | sort -V | tail -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager was not found under $ANDROID_SDK_ROOT"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --licenses
+          "$SDKMANAGER" --sdk_root="$ANDROID_SDK_ROOT" --install "platforms;android-22" "build-tools;22.0.1"
+
+      # This legacy Android Gradle Plugin must build with Java 8.
+      - name: Set up JDK 8 for legacy Gradle
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+
+      - name: Install Gradle 2.2.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://services.gradle.org/distributions/gradle-2.2.1-bin.zip -o "$RUNNER_TEMP/gradle-2.2.1-bin.zip"
+          unzip -q "$RUNNER_TEMP/gradle-2.2.1-bin.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-2.2.1/bin" >> "$GITHUB_PATH"
+
+      - name: Build debug APK
+        run: gradle --no-daemon --stacktrace assembleDebug
+
+      - name: Publish APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: DroidDLNA-Android44-debug-apk
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 14
