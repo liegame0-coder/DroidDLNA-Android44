@@ -1,0 +1,41 @@
+DroidDLNA Android 4.4 web-video receiver patch
+================================================
+
+Status: SOURCE PATCHED; APK NOT BUILT.
+
+Target:
+- Android minSdkVersion 15 (Android 4.0.3); Android 4.4 is within range.
+- Intended target device ABI: armeabi-v7a / ARM 32-bit.
+- Existing app uses Cling UPnP and registers a UPnP MediaRenderer.
+
+Changes made:
+1. AVTransportService accepts HTTP, HTTPS and file URIs.
+2. Removed the preliminary HttpFetch.validate() request. The receiver no longer
+   probes the supplied media URL before playback; Android MediaPlayer receives
+   the URI directly.
+3. Handles empty/missing DIDL metadata without NullPointerException.
+4. Defaults missing media type metadata to video and safely derives a display
+   name from the URI path when no dc:title is supplied.
+
+Important limitations:
+- This is not an APK and has not been compiled or device-tested.
+- The source tree is an old Android project (Android Gradle Plugin 1.2.3,
+  compileSdk 22, Build Tools 22.0.1, JCenter-era dependencies).
+- The current build environment has no Android SDK, Gradle installation or
+  cached Android build toolchain, and cannot resolve external hosts to download
+  them. Therefore an APK cannot honestly be produced in this session.
+- Android 4.4's MediaPlayer may not decode every website stream. DRM-protected
+  streams, browser-only playback, some HLS variants and signed/expiring URLs
+  may still fail. DLNA transports a media URL; it does not mirror Safari.
+- The project has no detected analytics/telemetry SDK or embedded vendor cloud
+  endpoint in the inspected Java/XML/Gradle sources. UPnP discovery and media
+  playback operate over the local network; the receiver necessarily connects
+  to the media URL supplied by the sender.
+
+Build requirements for a real APK:
+- JDK compatible with the selected Gradle/Android Gradle Plugin.
+- Android SDK Platform 22 and Build Tools 22.0.1 (or a carefully migrated
+  build configuration).
+- Resolve Android support libraries and any missing Gradle dependencies.
+- Build and verify APK ABI/minSdk with aapt/apkanalyzer, then install-test on
+  the actual Android 4.4 box.
